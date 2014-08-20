@@ -58,6 +58,17 @@ gulp.src('long.css')
         .pipe(gulp.dest('./'))
 ```
 
+To preserve your original file, you can output to a new set of files by passing in a destination filename.
+
+
+```javascript
+gulp.src('long.css')
+        .pipe(bless({
+            destinationFilename: ‘main.css’
+        }))
+        .pipe(gulp.dest('./'))
+```
+
 ##### A note about sourcemaps:
 If you're using a CSS pre-processor which creates inline sourcemaps [bless.js](https://github.com/paulyoung/bless.js) will take a very long time to run. It's recommended that you don't pass files containing inline sourcemaps to `gulp-bless`. If you do want to use sourcemaps then create them as a separate `.map` file. 
 
