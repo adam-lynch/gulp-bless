@@ -20,7 +20,7 @@ module.exports = function(options){
 
         if (file.contents && file.contents.toString()) {
             var fileName = path.basename(file.path);
-            var outputFilePath = path.resolve(path.dirname(file.path), fileName);
+            var outputFilePath = path.resolve(path.dirname(file.path), options.destinationFilename || fileName);
             var contents = file.contents.toString('utf8');
 
             new (bless.Parser)({
