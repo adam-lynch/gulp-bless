@@ -64,7 +64,7 @@ To preserve your original file, you can output to a new set of files by passing 
 ```javascript
 gulp.src('long.css')
         .pipe(bless({
-            destinationFilename: ‘main.css’
+            destinationFilename: 'main.css'
         }))
         .pipe(gulp.dest('./'))
 ```
