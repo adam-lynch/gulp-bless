@@ -1,6 +1,6 @@
 {
   "name": "gulp-bless",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "homepage": "http://github.com/adam-lynch/gulp-bless",
   "description": "CSS post-processor which splits CSS files suitably for Internet Explorer < 10. Bless + Gulp = gulp-bless.",
   "main": "./index.js",
