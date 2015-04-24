@@ -4,6 +4,7 @@ var through = require('through2');
 var path = require('path');
 var bless = require('bless');
 var gutil = require('gulp-util');
+var minimatch = require('minimatch');
 var merge = require('merge');
 var File = gutil.File;
 var PluginError = gutil.PluginError;
@@ -25,13 +26,15 @@ module.exports = function(options){
         if (file.isStream()) return cb(new PluginError(pluginName,  'Streaming not supported'));
 
         var stream = this;
+        var skip = options.exclude && minimatch(file.path, options.exclude);
 
-        if (file.contents && file.contents.toString()) {
+        if (!skip && file.contents && file.contents.toString()) {
             var fileName = path.basename(file.path);
             var outputFilePath = path.resolve(path.dirname(file.path), fileName);
             var contents = file.contents.toString('utf8');
             var blessOpts = merge(true, options);
-            if(typeof blessOpts.log !== 'undefined') delete blessOpts.log
+            if(typeof blessOpts.log !== 'undefined') delete blessOpts.log;
+            if(typeof blessOpts.exclude !== 'undefined') delete blessOpts.exclude;
 
             new (bless.Parser)({
                 output: outputFilePath,

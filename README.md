@@ -50,6 +50,8 @@ gulp.task('watch', function () {
 
 **bless(options)**. The (optional) `options` argument is passed on to [bless.js](https://github.com/paulyoung/bless.js). You can also include a `log` option to control whether Gulp should log output which defaults to `false` (this isn't passed to `bless.js`).
 
+An exclude option is also not passed to bless. It's a glob that, when matched, just passes files through unchanged.
+
 Bless' options are listed here: [paulyoung/bless.js/blob/master/bin/blessc#L10](https://github.com/paulyoung/bless.js/blob/master/bin/blessc#L10).
 For example, if you didn't want the first CSS chunk / "blessed" file to `@import` the others, then you'd do this:
 

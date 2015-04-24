@@ -8,6 +8,7 @@
     "bless": "~3.0.3",
     "gulp-util": "*",
     "through2": "~0.5.1",
+    "minimatch": "~2.0.4",
     "merge": "~1.2.0"
   },
   "devDependencies": {
