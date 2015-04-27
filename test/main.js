@@ -77,7 +77,7 @@ describe('gulp-bless', function() {
             stream.end();
         });
 
-        it("shouldn't pass log option to bless", function(done){
+        it("shouldn't pass log or exclude option to bless", function(done){
             var gulpBless = mockrequire('../index', {
                 bless: {
                     Parser: function(args){
@@ -85,6 +85,7 @@ describe('gulp-bless', function() {
 
                         options.should.be.type('object');
                         options.should.not.have.property('log');
+                        options.should.not.have.property('exclude');
 
                         done();
                         var originalBless = require('bless');
@@ -94,7 +95,8 @@ describe('gulp-bless', function() {
             });
 
             var stream = gulpBless({
-                log: true
+                log: false,
+                exclude: 'nothing'
             });
 
             stream.write(new File({
@@ -138,7 +140,34 @@ describe('gulp-bless', function() {
             stream.end();
         });
 
-        it("should do pass through a file if it's empty", function(done){
+        it('should not process excluded files', function(done){
+            var stream = bless({exclude: '**/*.css'}),
+                numberOfNewFiles = 0;
+
+            fs.readFile('./test/css/long.css', function(err, data){
+                if(err) throw new Error(err);
+
+                stream.on('data', function(newFile){
+                    numberOfNewFiles++;
+                    newFile.contents.toString('utf8').should.equal(data.toString('utf8'));
+                });
+
+                stream.on('end', function(){
+                    numberOfNewFiles.should.equal(1);
+                    done();
+                });
+
+                stream.write(new File({
+                    cwd: "/home/adam/",
+                    base: "/home/adam/test",
+                    path: "/home/adam/test/file.css",
+                    contents: new Buffer(data)
+                }));
+                stream.end();
+            });
+        });
+
+        it("should pass through a file if it's empty", function(done){
             var stream = bless(),
                 numberOfNewFiles = 0;
 
