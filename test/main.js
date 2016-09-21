@@ -138,7 +138,53 @@ describe('gulp-bless', function() {
             });
         });
 
+        it('should use custom part label if partLabel option is set', function(done){
+            var partLabel = "-part"
+            var stream = bless({
+                partLabel: partLabel
+            });
 
+            fs.readFile('./test/css/long.css', function(err, data){
+                if(err) throw new Error(err); 
+
+                var longStylesheet = new File({
+                        cwd: "/home/adam/",
+                        base: "/home/adam/test",
+                        path: "/home/adam/test/long-split.css",
+                        contents: new Buffer(data)
+                });
+
+                var actualSplits = []
+                stream.on("data", function(newFile){
+                    actualSplits.push(newFile);
+                });
+
+                stream.on("end", function(){
+                    actualSplits.should.have.length(2);
+                    var masterPart, subPart;
+                    actualSplits.forEach(function(splittedFile){
+                        should.exist(splittedFile);
+                        should.exist(splittedFile.path);
+                        should.exist(splittedFile.relative);
+                        should.exist(splittedFile.contents);
+                        if (path.basename(splittedFile.path) === "long-split.css") {
+                            masterPart = splittedFile;
+                        } else {
+                            subPart = splittedFile;
+                        }
+                    });
+                    should.exist(masterPart);
+                    should.exist(subPart);
+                    path.basename(subPart.path).should.equal("long-split" + partLabel + "1.css");
+                    var importRegex = "@import url\\('long-split" + partLabel  + "1.css\\?z=[0-9]+'\\);";
+                    masterPart.contents.toString("utf8").should.match(new RegExp(importRegex));
+                    done();
+                });
+
+                stream.write(longStylesheet)  
+                stream.emit("end")             
+            });
+        });
 
         it('should apply sourcemaps', function(done){
             var expectedSplits = [

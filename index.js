@@ -15,6 +15,7 @@ module.exports = function(options){
     options = options || {};
     options.imports = options.imports === undefined ? true : options.imports;
     options.cacheBuster = options.cacheBuster === undefined ? true : options.cacheBuster;
+    options.partLabel = options.partLabel === undefined ? "-blessed" : options.partLabel;
 
     return through.obj(function(file, enc, cb) {
         if (file.isNull()) return cb(null, file); // ignore
@@ -81,7 +82,7 @@ module.exports = function(options){
             var outputBasename = path.basename(outputFilePath, outputExtension);
 
             var createBlessedFileName = function(index){
-                return outputBasename + '-blessed' + index + outputExtension;
+                return outputBasename + options.partLabel + index + outputExtension;
             };
 
             var addImports = function(index, contents){
