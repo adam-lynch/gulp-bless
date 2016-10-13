@@ -17,6 +17,7 @@
   "devDependencies": {
     "gulp": "*",
     "gulp-coverage": "~0.1.24",
+    "gulp-each": "^0.2.0",
     "gulp-load-plugins": "^1.2.0",
     "gulp-mocha": "*",
     "gulp-rename": "^1.2.2",
