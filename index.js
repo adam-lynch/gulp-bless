@@ -103,9 +103,9 @@ module.exports = function(options){
                 return outputBasename + options.suffix(index) + outputExtension;
             };
 
-            var addImports = function(index, contents){
+            var addImports = function(contents){
                 // only the first file should have @imports
-                if(!options.imports || index){
+                if(!options.imports){
                   return contents;
                 }
 
@@ -120,23 +120,30 @@ module.exports = function(options){
 
 
             var outputFiles = [];
-            for(var j = numberOfSplits - 1; j >= 0; j--) {
-                var newIndex = numberOfSplits - 1 - j;
-                var outputPath = newIndex
-                    ? path.resolve(path.join(outputPathStart, createBlessedFileName(newIndex)))
-                    : outputFilePath;
-
-                outputFiles[newIndex] = addSourcemap(new File({
+            for(var j = 0; j < numberOfSplits; j++) {
+                var oneBasedIndex = j + 1;
+                var isAtLastElement = j == numberOfSplits - 1;
+                var outputPath = isAtLastElement
+                    ? outputFilePath
+                    : path.resolve(path.join(outputPathStart, createBlessedFileName(oneBasedIndex)));  
+                var newContensts = isAtLastElement
+                    ? new Buffer(addImports(result.data[j]))
+                    : new Buffer(result.data[j]);
+                outputFiles[j] = addSourcemap(new File({
                     cwd: file.cwd,
                     base: file.base,
                     path: outputPath,
-                    contents: new Buffer(addImports(newIndex, result.data[j]))
+                    contents: newContensts
                 }), j);
             }
 
-
+            //we want the file without the suffix (last element in the array) to be at the front of the stream so we 
+            //need to push to stream differently.
             for(var k = 0; k < numberOfSplits; k++){
-                stream.push(outputFiles[k]);
+                var fileToPush = k == 0
+                    ? outputFiles[numberOfSplits - 1]
+                    : outputFiles[k - 1];
+                stream.push(fileToPush);
             }
             cb()
         } else {

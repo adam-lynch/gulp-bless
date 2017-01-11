@@ -140,6 +140,74 @@ describe('gulp-bless', function() {
             });
         });
 
+        it('should splint content into correct file (issue #25)', function(done){
+            var stream = bless();
+
+            fs.readFile('./test/css/issue-25-test.css', function(err, data){
+                if(err) throw new Error(err);
+
+                var longStylesheet = new File({
+                        cwd: "/home/adam/",
+                        base: "/home/adam/test",
+                        path: "/home/adam/test/issue-25-test.css",
+                        contents: new Buffer(data)
+                    });
+                var actualSplits = [];
+                var expectedNumSplits = 3;
+
+                stream.on('data', function(newFile) {
+                    should.exist(newFile);
+                    should.exist(newFile.path);
+                    should.exist(newFile.relative);
+                    should.exist(newFile.contents);
+                    actualSplits.push(newFile);
+                });
+
+                var extractIndexes = function(split) {
+                    var contentAsString = split.contents.toString('utf8');
+                    var extractRegex = /\.item-([0-9]+)/g;
+                    var matches;
+                    var indexes = []; 
+                    do {
+                        matches = extractRegex.exec(contentAsString);
+                        if (matches) {
+                            indexes.push(parseInt(matches[1]));
+                        }
+                    } while(matches);
+
+                    return indexes;
+                }
+
+                stream.on('end', function() {
+                    actualSplits.length.should.equal(expectedNumSplits);
+                    var firstPart = actualSplits[1];
+                    var secondPart = actualSplits[2];
+                    var thirdPart = actualSplits[0]; //this should be the file with the original name.
+
+                    firstPart.path.should.endWith("/issue-25-test-blessed1.css");
+                    secondPart.path.should.endWith("/issue-25-test-blessed2.css");
+                    thirdPart.path.should.endWith("/issue-25-test.css");
+                    
+                    var firstPartIndexes = extractIndexes(firstPart);
+                    var secondPartIndexes = extractIndexes(secondPart);
+                    var thirdPartIndexes = extractIndexes(thirdPart);
+
+                    firstPartIndexes.should.have.length(4095);
+                    firstPartIndexes.should.matchEach(function(num) {num.should.be.within(1, 4095)});
+                    secondPartIndexes.should.have.length(4095);
+                    secondPartIndexes.should.matchEach(function(num) {num.should.be.within(4096, 8190)});
+                    thirdPartIndexes.should.have.length(3810);
+                    thirdPartIndexes.should.matchEach(function(num) {num.should.be.within(8191, 12000)});
+                    
+                    done();
+                });
+
+                stream.write(longStylesheet);
+                stream.emit('end');
+            });
+
+        });
+
         it('should use custom suffix if suffix option is set to a string', function(done){
             var suffix = "-part"
             var stream = bless({
