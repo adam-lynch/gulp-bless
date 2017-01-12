@@ -315,7 +315,7 @@ describe('gulp-bless', function() {
                     var mappingData = JSON.parse(result.contents.toString('utf8'));
                     mappingData.version.should.equal(3);
                     mappingData.names.should.be.empty();
-                    mappingData.sources.should.deepEqual(['/' + path.relative(process.cwd(), path.resolve(testCssDir, concatName))]);
+                    mappingData.sources.should.deepEqual([concatName]);
                     mappingData.mappings.should.equal('AAAA,OAAO,UAAA');
                     mappingData.file.should.equal('../' + concatName);
                     mappingData.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
