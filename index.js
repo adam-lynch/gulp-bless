@@ -10,6 +10,8 @@ var gutil           = require('gulp-util');
 var merge           = require('merge');
 var applySourcemap  = require('vinyl-sourcemaps-apply');
 
+var Concat          = require('concat-with-sourcemaps');
+
 var File = gutil.File;
 var PluginError = gutil.PluginError;
 var createSuffixFunctionFromString = function(configValue) {
@@ -76,8 +78,10 @@ module.exports = function(options){
                 if(!shouldCreateSourcemaps) return fileToAddTo;
 
                 var map = result.maps[blessOutputIndex];
-                map.file = fileToAddTo.relative;
-                map.sources = [file.relative];
+                map.file = path.relative(fileToAddTo.base, fileToAddTo.path);
+                map.sources = [path.relative(file.base, file.path)];
+                fileToAddTo.sourceMap = JSON.parse(JSON.stringify(file.sourceMap));
+
                 applySourcemap(fileToAddTo, map);
 
                 return fileToAddTo;
@@ -103,20 +107,21 @@ module.exports = function(options){
                 return outputBasename + options.suffix(index) + outputExtension;
             };
 
-            var addImports = function(index, contents){
-                // only the first file should have @imports
-                if(!options.imports || index){
-                  return contents;
-                }
-
-                var imports = '';
+            var addImports = function(aFile){
                 var parameters = options.cacheBuster ? '?z=' + Math.round((Math.random() * 999)) : '';
+                var concat = new Concat(shouldCreateSourcemaps, path.relative(aFile.base, aFile.path), '\n');
                 for (var i = 1; i < numberOfSplits; i++) {
-                    imports += "@import url('" + createBlessedFileName(i) + parameters + "');\n\n";
+                    concat.add(null, "@import url('" + createBlessedFileName(i) + parameters + "');\n");
                 }
 
-                return imports + contents;
+                concat.add(null, aFile.contents, JSON.stringify(aFile.sourceMap));
+
+                aFile.contents = concat.content;
+                if (shouldCreateSourcemaps) {
+                    aFile.sourceMap = JSON.parse(concat.sourceMap);
+                }
             };
+
 
 
             var outputFiles = [];
@@ -130,8 +135,13 @@ module.exports = function(options){
                     cwd: file.cwd,
                     base: file.base,
                     path: outputPath,
-                    contents: new Buffer(addImports(newIndex, result.data[j]))
+                    contents: new Buffer(result.data[j])
                 }), j);
+
+                //only add import to the first part
+                if (options.imports && newIndex === 0) {
+                    addImports(outputFiles[newIndex]);
+                }
             }
 
 

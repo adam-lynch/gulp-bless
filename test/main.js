@@ -2,7 +2,7 @@ var mockrequire = require('proxyquire');
 
 var bless       = require('../');
 var concat      = require("gulp-concat");
-var cleanCss     = require('gulp-clean-css');
+var cleanCss    = require('gulp-clean-css');
 var should      = require('should');
 var fs          = require('fs');
 var path        = require('path');
@@ -10,7 +10,10 @@ var File        = require('gulp-util').File;
 var Buffer      = require('buffer').Buffer;
 var assert      = require('stream-assert');
 var gulp        = require('gulp');
+var sass        = require('gulp-sass');
 var $           = require('gulp-load-plugins')({scope: 'devDependencies'});
+
+var SourceMapConsumer = require('source-map').SourceMapConsumer;
 
 describe('gulp-bless', function() {
     describe('bless()', function() {
@@ -279,9 +282,13 @@ describe('gulp-bless', function() {
                     result.sourceMap.sources.should.have.length(1);
                     result.sourceMap.sources[0].should.match(/long-split\.css$/);
                     result.sourceMap.file.should.equal(path.basename(expectedSplits[0].path));
-                    result.sourceMap.mappings.should.equal(
-                        fs.readFileSync('./test/css/long-split.map').toString('utf8')
-                    );
+
+                    var smConsumer = new SourceMapConsumer(result.sourceMap);
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal('long-split.css');
+                        oneMapping.originalLine.should.equal(4096); //this split contains the one extra line
+                    })
+                    
                 }))
                 .pipe(assert.second(function(result) {
                     path.relative('./', result.path).should.equal(path.relative('/home', expectedSplits[1].path));
@@ -290,15 +297,26 @@ describe('gulp-bless', function() {
                     result.sourceMap.sources.should.have.length(1);
                     result.sourceMap.sources[0].should.match(/long-split\.css$/);
                     result.sourceMap.file.should.equal(path.basename(expectedSplits[1].path));
-                    result.sourceMap.mappings.should.equal(
-                        fs.readFileSync('./test/css/long-split-blessed1.map').toString('utf8')
-                    );
+                    var smConsumer = new SourceMapConsumer(result.sourceMap);
+                    var mappedLine = [];
+                    for (var i = 0; i < 4095; i++) {
+                        mappedLine.push(false);
+                    }
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal('long-split.css');
+                        //each of the line (up to 4095 ) should get mapped to something
+                        mappedLine[oneMapping.originalLine - 1] = true;
+                    })
+
+                    mappedLine.forEach(function (visited, index) {
+                        visited.should.equal(true, "did not find a mapping for line " + (index + 1) + " in original file");
+                    })
                 }))
                 .pipe(assert.end(done));
         });
 
         /* Issue 36 test */
-        it('should apply sourcemaps correctly for no split', function(done) {      
+        it('should apply sourcemaps correctly for no split and combined with other processor', function(done) {      
             var testCssDir = 'test/css'; 
             var testFileName = testCssDir + '/small.css';
             var concatName = 'small.contacted.css';
@@ -315,10 +333,16 @@ describe('gulp-bless', function() {
                     var mappingData = JSON.parse(result.contents.toString('utf8'));
                     mappingData.version.should.equal(3);
                     mappingData.names.should.be.empty();
-                    mappingData.sources.should.deepEqual([concatName]);
-                    mappingData.mappings.should.equal('AAAA,OAAO,UAAA');
+                    mappingData.sources.should.deepEqual([path.basename(testFileName)]);
                     mappingData.file.should.equal('../' + concatName);
                     mappingData.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
+
+                    var smConsumer = new SourceMapConsumer(mappingData);
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal(path.basename(testFileName));
+                        oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
+                        oneMapping.originalColumn.should.equal(0, "everything should map to column 0 in original scss file");
+                    })
                 }))
                 .pipe(assert.nth(1, function(result) {
                     result.relative.should.equal(concatName);
@@ -328,7 +352,9 @@ describe('gulp-bless', function() {
                 .pipe(assert.end(done));
         });
 
-        it('should apply sourcemaps correctly when there already is a sourcemap', function(done){
+        it('should apply sourcemaps correctly when there already is a sourcemap also produces correct sourcemap upon split', function(done){
+            this.timeout(5000); //yea .. this test reads larger data so needs more time
+
             var expectedSplits = [
                 new File({
                     cwd: "/home/test/",
@@ -344,62 +370,77 @@ describe('gulp-bless', function() {
                 })
             ];
 
-            //note that for each assert that reads large file, we will provide custom error message to speed up the test execution 
-            //shall there be any failure.
-            gulp.src('./test/css/long.css')
-                .pipe($.rename({
-                    suffix: '-split'
-                }))
+            var concatName = "long-split.css";
+            var sourceName = "small.css";
+
+            gulp.src('./test/css/long-parent.scss')
                 .pipe($.sourcemaps.init())
-                .pipe(concat("long-split.css")) //concat will produce a source mapping
+                .pipe(sass({outputStyle: 'expanded'}))
+                .pipe(concat(concatName))
                 .pipe(bless())
+                .pipe(cleanCss({processImport: false, advanced: false}))
                 .pipe($.sourcemaps.write('./generated-sourcemaps'))
                 .pipe(assert.length(4))
                 .pipe(assert.nth(0, function(result) {
                     result.path.should.match(/long-split\.css\.map$/);
-                    var expectedValueFile = './test/css/long-split-with-pre-existing-sourcemap.map';
-                    result.contents.toString('utf8').should.equal(
-                        fs.readFileSync(expectedValueFile).toString('utf8').trim(),
-                        "first split source map does not contain expected content as contained in " + expectedValueFile
-                    );
+                    var sourceMapPart1 = JSON.parse(result.contents.toString('utf8'));
+                    sourceMapPart1.version.should.equal(3);
+                    sourceMapPart1.file.should.equal("../" + concatName);
+                    sourceMapPart1.sources.should.deepEqual([sourceName])
+                    //yes, souce content should be from the small.css which included by parente.scss
+                    sourceMapPart1.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
+                    var smConsumer = new SourceMapConsumer(sourceMapPart1);
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal(path.basename(sourceName));
+                        oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
+                    })
+
                 }))
                 .pipe(assert.nth(1, function(result) {
                     path.relative('./', result.path).should.equal(path.relative('/home', expectedSplits[0].path));
                     result.contents.toString('utf8')
-                        .replace(/\?z=[0-9]+'\)/g, "?z=xxx')")
-                        .should.equal(expectedSplits[0].contents.toString('utf8'));
+                        .replace(/\?z=[0-9]+\)/g, "?z=xxx)")
+                        .should.equal(expectedSplits[0].contents.toString('utf8'), "not equal to content of file ./test/css/long-split-with-sourcemap-comment.css");
 
                     result.sourceMap.sources.should.have.length(1);
-                    result.sourceMap.sources[0].should.match(/long-split\.css$/);
+                    result.sourceMap.sources.should.deepEqual([sourceName]);
                     result.sourceMap.file.should.equal('../' + path.basename(expectedSplits[0].path));
-                    var expectedValueFile = './test/css/long-split.map';
-                    result.sourceMap.mappings.should.equal(
-                        fs.readFileSync(expectedValueFile).toString('utf8').trim(),
-                        "first split does not contain correcing source map mapping as contained in " + expectedValueFile
-                    );
+                    var smConsumer = new SourceMapConsumer(result.sourceMap);
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal(path.basename(sourceName));
+                        oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
+                    })
                 }))
                 .pipe(assert.nth(2, function(result) {
                     result.path.should.match(/long-split-blessed1\.css\.map$/);
-                    var expectedValueFile = './test/css/long-split-blessed1-with-pre-existing-sourcemap.map';
-                    result.contents.toString('utf8').should.match(
-                        fs.readFileSync(expectedValueFile).toString('utf8').trim(),
-                        "second split source map does not contain expected content as contained in " + expectedValueFile
-                    );
+                    var sourceMapPart2 = JSON.parse(result.contents.toString('utf8'));
+                    sourceMapPart2.version.should.equal(3);
+                    sourceMapPart2.file.should.equal("../long-split-blessed1.css")
+                    sourceMapPart2.sources.should.deepEqual(["small.css"])
+                    sourceMapPart2.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
+                    var smConsumer = new SourceMapConsumer(sourceMapPart2);
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal(path.basename(sourceName));
+                        oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
+                    })
                 }))
                 .pipe(assert.nth(3, function(result) {
                     path.relative('./', result.path).should.equal(path.relative('/home', expectedSplits[1].path));
-                    result.contents.toString('utf8').should.equal(expectedSplits[1].contents.toString('utf8'));
+                    result.contents.toString('utf8').should.equal(
+                        expectedSplits[1].contents.toString('utf8'),
+                        "not equal to content of file ./test/css/long-split-blessed1-with-sourcemap-comment.css"
+                    );
 
                     result.sourceMap.sources.should.have.length(1);
-                    result.sourceMap.sources[0].should.match(/long-split\.css$/);
+                    result.sourceMap.sources.should.deepEqual([sourceName]);
                     result.sourceMap.file.should.equal('../' + path.basename(expectedSplits[1].path));
-                    var expectedValueFile = './test/css/long-split-blessed1.map';
-                    result.sourceMap.mappings.should.equal(
-                        fs.readFileSync(expectedValueFile).toString('utf8').trim(),
-                        "second split does not contain correcing source map mapping as contained in " + expectedValueFile
-                    );
+                    var smConsumer = new SourceMapConsumer(result.sourceMap);
+                    smConsumer.eachMapping(function(oneMapping) {
+                        oneMapping.source.should.equal(path.basename(sourceName));
+                        oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
+                    })
                 }))
-                .pipe(assert.end(done));
+                .pipe(assert.end(done))
         });
 
 
