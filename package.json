@@ -6,6 +6,7 @@
   "main": "./index.js",
   "dependencies": {
     "bless": "^4.0.0",
+    "concat-with-sourcemaps": "^1.0.4",
     "gulp-util": "*",
     "lodash.isfunction": "^3.0.8",
     "lodash.isstring": "^4.0.1",
