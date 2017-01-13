@@ -80,6 +80,9 @@ module.exports = function(options){
                 var map = result.maps[blessOutputIndex];
                 map.file = path.relative(fileToAddTo.base, fileToAddTo.path);
                 map.sources = [path.relative(file.base, file.path)];
+
+                //gotta assign fileToAddTo a source map so applyScourceMap can merge original
+                //and blessed sourcemap.
                 fileToAddTo.sourceMap = JSON.parse(JSON.stringify(file.sourceMap));
 
                 applySourcemap(fileToAddTo, map);
@@ -107,14 +110,15 @@ module.exports = function(options){
                 return outputBasename + options.suffix(index) + outputExtension;
             };
 
-            var addImports = function(aFile){
+            var addImports = function(aFile, fileNamesOfPartsToImport){
                 var parameters = options.cacheBuster ? '?z=' + Math.round((Math.random() * 999)) : '';
-                var concat = new Concat(shouldCreateSourcemaps, path.relative(aFile.base, aFile.path), '\n');
-                for (var i = 1; i < numberOfSplits; i++) {
-                    concat.add(null, "@import url('" + createBlessedFileName(i) + parameters + "');\n");
+                var filePath = path.relative(aFile.base, aFile.path);
+                var concat = new Concat(shouldCreateSourcemaps, filePath, '\n');
+                for (var i = 0; i < fileNamesOfPartsToImport.length; i++) {
+                    concat.add(null, "@import url('" + fileNamesOfPartsToImport[i] + parameters + "');\n");
                 }
 
-                concat.add(null, aFile.contents, JSON.stringify(aFile.sourceMap));
+                concat.add(filePath, aFile.contents, JSON.stringify(aFile.sourceMap));
 
                 aFile.contents = concat.content;
                 if (shouldCreateSourcemaps) {
@@ -122,31 +126,42 @@ module.exports = function(options){
                 }
             };
 
-
-
             var outputFiles = [];
-            for(var j = numberOfSplits - 1; j >= 0; j--) {
-                var newIndex = numberOfSplits - 1 - j;
-                var outputPath = newIndex
-                    ? path.resolve(path.join(outputPathStart, createBlessedFileName(newIndex)))
-                    : outputFilePath;
+            var nonMasterPartFileNames = [];
+            for(var j = 0; j < numberOfSplits; j++) {
+                var oneBasedIndex = j + 1;
+                var isAtLastElement = j == numberOfSplits - 1;
 
-                outputFiles[newIndex] = addSourcemap(new File({
+                //last element is the "master" file (the one with @import).
+                var outputPath = isAtLastElement
+                    ? outputFilePath
+                    : path.resolve(path.join(outputPathStart, createBlessedFileName(oneBasedIndex)));
+
+                var outFile = addSourcemap(new File({
                     cwd: file.cwd,
                     base: file.base,
                     path: outputPath,
                     contents: new Buffer(result.data[j])
                 }), j);
-
-                //only add import to the first part
-                if (options.imports && newIndex === 0) {
-                    addImports(outputFiles[newIndex]);
+        
+                if (options.imports) {
+                    if (isAtLastElement) {
+                        addImports(outFile, nonMasterPartFileNames);
+                    } else {
+                        nonMasterPartFileNames.push(path.basename(outputPath)); 
+                    }
                 }
+
+                outputFiles[j] = outFile;
             }
 
-
+            //We want to stream the "master" file first then split part1, part2, part3 ... this is mainly to maintain backward
+            //compatibility; at lease for the file emitting order ...
             for(var k = 0; k < numberOfSplits; k++){
-                stream.push(outputFiles[k]);
+                var fileToPush = k == 0
+                    ? outputFiles[numberOfSplits - 1]
+                    : outputFiles[k - 1];
+                stream.push(fileToPush);
             }
             cb()
         } else {
