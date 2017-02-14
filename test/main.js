@@ -283,8 +283,8 @@ describe('gulp-bless', function() {
                     result.sourceMap.sources[0].should.match(/long-split\.css$/);
                     result.sourceMap.file.should.equal(path.basename(expectedSplits[0].path));
 
-                    var smConsumer = new SourceMapConsumer(result.sourceMap);
-                    smConsumer.eachMapping(function(oneMapping) {
+                    var sourceMapConsumer = new SourceMapConsumer(result.sourceMap);
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal('long-split.css');
                         oneMapping.originalLine.should.equal(4096); //this split contains the one extra line
                     })
@@ -297,12 +297,12 @@ describe('gulp-bless', function() {
                     result.sourceMap.sources.should.have.length(1);
                     result.sourceMap.sources[0].should.match(/long-split\.css$/);
                     result.sourceMap.file.should.equal(path.basename(expectedSplits[1].path));
-                    var smConsumer = new SourceMapConsumer(result.sourceMap);
+                    var sourceMapConsumer = new SourceMapConsumer(result.sourceMap);
                     var mappedLine = [];
                     for (var i = 0; i < 4095; i++) {
                         mappedLine.push(false);
                     }
-                    smConsumer.eachMapping(function(oneMapping) {
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal('long-split.css');
                         //each of the line (up to 4095 ) should get mapped to something
                         mappedLine[oneMapping.originalLine - 1] = true;
@@ -337,8 +337,8 @@ describe('gulp-bless', function() {
                     mappingData.file.should.equal('../' + concatName);
                     mappingData.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
 
-                    var smConsumer = new SourceMapConsumer(mappingData);
-                    smConsumer.eachMapping(function(oneMapping) {
+                    var sourceMapConsumer = new SourceMapConsumer(mappingData);
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal(path.basename(testFileName));
                         oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
                         oneMapping.originalColumn.should.equal(0, "everything should map to column 0 in original scss file");
@@ -387,10 +387,10 @@ describe('gulp-bless', function() {
                     sourceMapPart1.version.should.equal(3);
                     sourceMapPart1.file.should.equal("../" + concatName);
                     sourceMapPart1.sources.should.deepEqual([sourceName])
-                    //yes, souce content should be from the small.css which included by parente.scss
+                    //yes, souce content should be from the small.css which included by long-parent.scss
                     sourceMapPart1.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
-                    var smConsumer = new SourceMapConsumer(sourceMapPart1);
-                    smConsumer.eachMapping(function(oneMapping) {
+                    var sourceMapConsumer = new SourceMapConsumer(sourceMapPart1);
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal(path.basename(sourceName));
                         oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
                     })
@@ -405,8 +405,8 @@ describe('gulp-bless', function() {
                     result.sourceMap.sources.should.have.length(1);
                     result.sourceMap.sources.should.deepEqual([sourceName]);
                     result.sourceMap.file.should.equal('../' + path.basename(expectedSplits[0].path));
-                    var smConsumer = new SourceMapConsumer(result.sourceMap);
-                    smConsumer.eachMapping(function(oneMapping) {
+                    var sourceMapConsumer = new SourceMapConsumer(result.sourceMap);
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal(path.basename(sourceName));
                         oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
                     })
@@ -418,8 +418,8 @@ describe('gulp-bless', function() {
                     sourceMapPart2.file.should.equal("../long-split-blessed1.css")
                     sourceMapPart2.sources.should.deepEqual(["small.css"])
                     sourceMapPart2.sourcesContent.should.deepEqual(['.small{font-size: 10px}']);
-                    var smConsumer = new SourceMapConsumer(sourceMapPart2);
-                    smConsumer.eachMapping(function(oneMapping) {
+                    var sourceMapConsumer = new SourceMapConsumer(sourceMapPart2);
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal(path.basename(sourceName));
                         oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
                     })
@@ -434,8 +434,8 @@ describe('gulp-bless', function() {
                     result.sourceMap.sources.should.have.length(1);
                     result.sourceMap.sources.should.deepEqual([sourceName]);
                     result.sourceMap.file.should.equal('../' + path.basename(expectedSplits[1].path));
-                    var smConsumer = new SourceMapConsumer(result.sourceMap);
-                    smConsumer.eachMapping(function(oneMapping) {
+                    var sourceMapConsumer = new SourceMapConsumer(result.sourceMap);
+                    sourceMapConsumer.eachMapping(function(oneMapping) {
                         oneMapping.source.should.equal(path.basename(sourceName));
                         oneMapping.originalLine.should.equal(1, "everything shoud map to line 1 in original scss file");
                     })

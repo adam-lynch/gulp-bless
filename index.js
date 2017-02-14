@@ -130,7 +130,7 @@ module.exports = function(options){
             var nonMasterPartFileNames = [];
             for(var j = 0; j < numberOfSplits; j++) {
                 var oneBasedIndex = j + 1;
-                var isAtLastElement = j == numberOfSplits - 1;
+                var isAtLastElement = oneBasedIndex === numberOfSplits;
 
                 //last element is the "master" file (the one with @import).
                 var outputPath = isAtLastElement
@@ -156,7 +156,7 @@ module.exports = function(options){
             }
 
             //We want to stream the "master" file first then split part1, part2, part3 ... this is mainly to maintain backward
-            //compatibility; at lease for the file emitting order ...
+            //compatibility; at least for the file emitting order ...
             for(var k = 0; k < numberOfSplits; k++){
                 var fileToPush = k == 0
                     ? outputFiles[numberOfSplits - 1]
