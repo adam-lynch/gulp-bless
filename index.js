@@ -35,6 +35,7 @@ module.exports = function(options){
     options = options || {};
     options.imports = options.imports === undefined ? true : options.imports;
     options.cacheBuster = options.cacheBuster === undefined ? true : options.cacheBuster;
+    options.reverseOrder = options.reverseOrder === undefined ? false : options.reverseOrder;
     options.suffix = createSuffixFunction(options.suffix);
 
     return through.obj(function(file, enc, cb) {
@@ -130,7 +131,14 @@ module.exports = function(options){
             var nonMasterPartFileNames = [];
             for(var j = 0; j < numberOfSplits; j++) {
                 var oneBasedIndex = j + 1;
-                var isAtLastElement = oneBasedIndex === numberOfSplits;
+                var isAtLastElement;
+
+                if (options.reverseOrder) {
+                    oneBasedIndex = Math.abs(oneBasedIndex - numberOfSplits)
+                    isAtLastElement = oneBasedIndex === 0;
+                } else {
+                    isAtLastElement = oneBasedIndex === numberOfSplits;
+                }
 
                 //last element is the "master" file (the one with @import).
                 var outputPath = isAtLastElement
