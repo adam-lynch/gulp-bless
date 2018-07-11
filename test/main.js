@@ -123,7 +123,7 @@ describe('gulp-bless', function() {
                             var expectedSplitFile = expectedSplits[index];
                             newFile.relative.should.equal(path.basename(expectedSplitFile.path));
 
-                            var contents = newFile.contents.toString('utf8').replace(/\?z=[0-9]+'\)/g, "?z=xxx')");
+                            var contents = newFile.contents.toString('utf8').replace(/\?z=[0-9a-f]+'\)/g, "?z=xxx')");
 
                             contents.should.equal(expectedSplitFile.contents.toString('utf8'));
                             Buffer.isBuffer(newFile.contents).should.equal(true);
@@ -181,7 +181,7 @@ describe('gulp-bless', function() {
                     should.exist(masterPart);
                     should.exist(subPart);
                     path.basename(subPart.path).should.equal("long-split" + suffix + "1.css");
-                    var importRegex = "@import url\\('long-split" + suffix  + "1.css\\?z=[0-9]+'\\);";
+                    var importRegex = "@import url\\('long-split" + suffix  + "1.css\\?z=[0-9a-f]+'\\);";
                     masterPart.contents.toString("utf8").should.match(new RegExp(importRegex));
                     done();
                 });
@@ -231,7 +231,7 @@ describe('gulp-bless', function() {
                     should.exist(masterPart);
                     should.exist(subPart);
                     path.basename(subPart.path).should.equal("long-split" + suffix + "-1.css");
-                    var importRegex = "@import url\\('long-split" + suffix  + "-1.css\\?z=[0-9]+'\\);";
+                    var importRegex = "@import url\\('long-split" + suffix  + "-1.css\\?z=[0-9a-f]+'\\);";
                     masterPart.contents.toString("utf8").should.match(new RegExp(importRegex));
                     done();
                 });
@@ -276,7 +276,7 @@ describe('gulp-bless', function() {
                 .pipe(assert.first(function(result) {
                     path.relative('./', result.path).should.equal(path.relative('/home', expectedSplits[0].path));
                     result.contents.toString('utf8')
-                        .replace(/\?z=[0-9]+'\)/g, "?z=xxx')")
+                        .replace(/\?z=[0-9a-f]+'\)/g, "?z=xxx')")
                         .should.equal(expectedSplits[0].contents.toString('utf8'));
 
                     result.sourceMap.sources.should.have.length(1);
@@ -399,7 +399,7 @@ describe('gulp-bless', function() {
                 .pipe(assert.nth(1, function(result) {
                     path.relative('./', result.path).should.equal(path.relative('/home', expectedSplits[0].path));
                     result.contents.toString('utf8')
-                        .replace(/\?z=[0-9]+\)/g, "?z=xxx)")
+                        .replace(/\?z=[0-9a-f]+\)/g, "?z=xxx)")
                         .should.equal(expectedSplits[0].contents.toString('utf8'), "not equal to content of file ./test/css/long-split-with-sourcemap-comment.css");
 
                     result.sourceMap.sources.should.have.length(1);
@@ -564,7 +564,7 @@ describe('gulp-bless', function() {
                             var expectedSplitFile = expectedSplits[index];
                             newFile.relative.should.equal(path.basename(expectedSplitFile.path));
 
-                            var contents = newFile.contents.toString('utf8').replace(/\?z=[0-9]+'\)/g, "?z=xxx')");
+                            var contents = newFile.contents.toString('utf8').replace(/\?z=[0-9a-f]+'\)/g, "?z=xxx')");
 
                             contents.should.equal(expectedSplitFile.contents.toString('utf8'));
                             Buffer.isBuffer(newFile.contents).should.equal(true);

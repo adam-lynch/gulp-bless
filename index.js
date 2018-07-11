@@ -11,6 +11,7 @@ var Vinyl           = require('vinyl');
 var fancyLog        = require('fancy-log');
 var merge           = require('merge');
 var applySourcemap  = require('vinyl-sourcemaps-apply');
+var crypto          = require('crypto');
 
 var Concat          = require('concat-with-sourcemaps');
 
@@ -111,7 +112,12 @@ module.exports = function(options){
             };
 
             var addImports = function(aFile, fileNamesOfPartsToImport){
-                var parameters = options.cacheBuster ? '?z=' + Math.round((Math.random() * 999)) : '';
+                var generated_hash = crypto
+                    .createHash('sha1')
+                    .update(aFile.contents, 'binary')
+                    .digest('hex');
+
+                var parameters = options.cacheBuster ? '?z=' + generated_hash : '';
                 var filePath = path.relative(aFile.base, aFile.path);
                 var concat = new Concat(shouldCreateSourcemaps, filePath, '\n');
                 for (var i = 0; i < fileNamesOfPartsToImport.length; i++) {
